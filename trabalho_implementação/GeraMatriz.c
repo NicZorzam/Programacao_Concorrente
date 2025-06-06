@@ -14,7 +14,7 @@ float geraNumAleatorio() { //funcao que gera floats aleatorios
 int main(int argc, char **argv) {
   float **mat; //matriz onde serao guardado os valores 
   int numLinhas; //quantidade de linhas da matriz 
-  FILE * descritorArquivo; //descritor do arquivo de saida
+  FILE *descritorArquivo; //descritor do arquivo de saida
   if(argc != 3) { 
     printf("ERRO: Entrada invalida! Tente './GeraMatriz <numero de linhas> <nome do arquivo de saida>'\n");
     return 1;
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
   }
   fwrite(&numLinhas, sizeof(int), 1, descritorArquivo); //insere o numero de linhas no arquivo
   for(int i = 0; i < numLinhas; i++) {
-    if(fwrite(mat[i], sizeof(float), 3, descritorArquivo) < 3) { //insere os elementos de cada linha no arquivo
+    if(fwrite(mat[i], sizeof(float), 3, descritorArquivo) != 3) { //insere os elementos de cada linha no arquivo
       printf("ERRO: Escrita nao finalizada com sucesso!\n");
       return 6;
     } 
