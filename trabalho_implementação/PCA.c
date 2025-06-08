@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
   }
   for(int i = 0; i < numLinhas; i++) {
     mat[i] = (float*) malloc(3*sizeof(float));
-  if(mat[i] == NULL) {
+    if(mat[i] == NULL) {
       printf("ERRO: Falha ao alocar memoria para a linha %d da matriz!\n", i+1);
       fclose(arq);
       for(int j = 0; j < i; j++) {
