@@ -88,19 +88,13 @@ void resolve_cubica(double a, double b, double c) {
     double PI = acos(-1);
 
     if (delta > 0) {
-        // Uma raiz real
-        double s = cbrt(r + sqrt(delta));
-        double t = cbrt(r - sqrt(delta));
-        double x1 = -a/3 + (s + t);
-        // printf("Autovalor real: %.6f\n", x1);
+        printf("ERRO: erro de construcao de matriz\n");
+        return;
     } else if (delta == 0) {
-        // Raízes reais e pelo menos duas iguais
-        double s = cbrt(r);
-        double x1 = -a/3 + 2*s;
-        double x2 = -a/3 - s;
-        // printf("Autovalores reais (dois iguais): %.6f, %.6f\n", x1, x2);
+        printf("ERRO: erro de construcao de matriz\n");
+        return;
     } else {
-        // Três raízes reais
+        // tres raizes reais (o esperado)
         double theta = acos(r / sqrt(-q*q*q));
         double x1 = 2 * sqrt(-q) * cos(theta/3) - a/3;
         double x2 = 2 * sqrt(-q) * cos((theta + 2*PI)/3) - a/3;
