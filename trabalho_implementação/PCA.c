@@ -83,7 +83,6 @@ void resolve_cubica(double a, double b, double c) {
     double q = (3*b - a*a)/9;
     double r = (9*a*b - 27*c - 2*a*a*a)/54;
     double delta = q*q*q + r*r;
-
     double PI = acos(-1);
 
     if (delta > 0) {
@@ -140,17 +139,14 @@ void calc_autovalores(){
     resolve_cubica(A, B, C);
 }
 
-
-void *calc_autovetor(void *arg) {
-    long i = (long) arg;
-
-    double lambda = autovalores[i];
+void calc_autovetor(long int id) {
+  for(long int idV = id; idV < 3; idV += nthreads) {
+    double lambda = autovalores[idV];
     double A[3][3];
-
-    // matriz (C - λI)
+      // matriz (C - λI)
     for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            A[i][j] = cov[i][j] - (i == j ? lambda : 0);
+      for (int j = 0; j < 3; j++)
+        A[i][j] = cov[i][j] - (i == j ? lambda : 0);
 
     // como o sistema é homogêneo, podemos assumir v[2] = 1 e resolver para v[0], v[1]
     double v[3] = {0, 0, 1};
@@ -165,21 +161,20 @@ void *calc_autovetor(void *arg) {
     double det = a*e - b*d;
     if (fabs(det) < 1e-8) {
         // sistema dependente
-        v[0] = 1; v[1] = 0;
+      v[0] = 1; v[1] = 0;
     } else {
-        v[0] = (c*e - b*f)/det;
-        v[1] = (a*f - c*d)/det;
+      v[0] = (c*e - b*f)/det;
+      v[1] = (a*f - c*d)/det;
     }
 
     // normalizando vetor
     double norm = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    autovetores[i][0] = v[0]/norm;
-    autovetores[i][1] = v[1]/norm;
-    autovetores[i][2] = v[2]/norm;
-
-    pthread_exit(NULL);
+    autovetores[idV][0] = v[0]/norm;
+    autovetores[idV][1] = v[1]/norm;
+    autovetores[idV][2] = v[2]/norm;
+  }
+  barreira();
 }
-
 
 void ordena_autovetores() {
   for (int i = 0; i < 2; i++) {
@@ -198,14 +193,16 @@ void ordena_autovetores() {
   }
 }
 
-
-
 void *tPCA(void *threads) {
   long int id = (long int) threads; //id da thread
   printf("\nOi da thread: %ld\n", id);
   centraliza(id); //centraliza a matriz  
   calcConvar(id); //calcula a matriz de covariancia
-  // tAutovetor(id);
+  if(id == 0) calc_autovalores(); //calcula os autovalores
+  barreira();
+  calc_autovetor(id); //calcula os autovetores
+  if(id == 0) ordena_autovetores(); //ordena os autovetores
+  barreira();
   pthread_exit(NULL);
 }
 
@@ -292,19 +289,17 @@ int main(int argc, char **argv) {
     }
     printf("\n");
   }
-  #endif
+  /*#endif
   calc_autovalores();
-
   for (long i = 0; i < 3; i++) {
       pthread_create(&threads[i], NULL, calc_autovetor, (void*) i);
     }
-
     for (int i = 0; i < 3; i++) {
       pthread_join(threads[i], NULL);
     }
-
   ordena_autovetores();
-  #ifdef TEXTO
+  #ifdef TEXTO*/
+  printf("\n");
   for (int h = 0; h < 3; h++){
     printf("autovalor: %f\n", autovalores[h]);
     printf("autovetor: ");
