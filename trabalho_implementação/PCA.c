@@ -3,10 +3,12 @@
 #include<pthread.h>
 #include<semaphore.h>
 #include<math.h>
+#include<time.h>
 
 #define TEXTO //descomente esta linha para imprimir a matriz lida do arquivo
 
 float **mat; //matriz de entrada
+float **proj; // matriz de projeção
 float cov[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}}; //matriz de covariancia
 float autovalores[3] = {0.0, 0.0, 0.0}; // lista dos autovalores 
 float autovetores [3][3];
@@ -148,7 +150,7 @@ void calc_autovetor(long int id) {
       for (int j = 0; j < 3; j++)
         A[i][j] = cov[i][j] - (i == j ? lambda : 0);
 
-    // como o sistema é homogêneo, podemos assumir v[2] = 1 e resolver para v[0], v[1]
+    // como o sistema é homogêneo, podemos assumir v[2] = 1 e resolver v[0] v[1]
     double v[3] = {0, 0, 1};
 
     // resolver o sistema:
@@ -193,6 +195,17 @@ void ordena_autovetores() {
   }
 }
 
+void projecao(long int id) {
+  for (long int i = id; i < numLinhas; i += nthreads) {
+    for (int j = 0; j < 3; j++) {
+      proj[i][j] = 0.0;
+      for (int k = 0; k < 3; k++) {
+        proj[i][j] += mat[i][k] * autovetores[j][k];
+      }
+    }
+  }
+}
+
 void *tPCA(void *threads) {
   long int id = (long int) threads; //id da thread
   printf("\nOi da thread: %ld\n", id);
@@ -203,10 +216,14 @@ void *tPCA(void *threads) {
   calc_autovetor(id); //calcula os autovetores
   if(id == 0) ordena_autovetores(); //ordena os autovetores
   barreira();
+  projecao(id);
+  barreira();
   pthread_exit(NULL);
 }
 
 int main(int argc, char **argv) {
+  clock_t inicio, fim;
+  double tempo;
   FILE *arq; //arquivo de entrada
   pthread_t *threads; //vetor de threads
   if(argc != 3) {
@@ -248,6 +265,23 @@ int main(int argc, char **argv) {
       return 5;
     }
   }
+  proj = (float**) malloc(numLinhas * sizeof(float*));
+  if(proj == NULL) {
+    printf("ERRO: Falha ao alocar memoria para a matriz!\n");
+    return 3;
+  }
+
+  for(int i = 0; i < numLinhas; i++) {
+    proj[i] = (float*) malloc(3 * sizeof(float));
+    if(proj[i] == NULL) {
+      printf("ERRO: Falha ao alocar memoria para a linha %d da matriz!\n", i+1);
+      for(int j = 0; j < i; j++) {
+        free(proj[j]);
+      }
+      free(proj);
+      return 4;
+    }
+  }
   #ifdef TEXTO
   printf("Matriz lida do arquivo:\n");
   printMatriz(); //imprime a matriz lida do arquivo
@@ -264,6 +298,7 @@ int main(int argc, char **argv) {
   }
   sem_init(&mutexBar, 0, 1); //inicializa o semaforo mutex
   sem_init(&cond, 0, 0); //inicializa o semaforo cond
+  inicio = clock();
   for(long int i = 0; i < nthreads; i++) {
     if(pthread_create(&threads[i], NULL, tPCA, (void *) i)) { //cria as threads
       printf("ERRO: Falha ao criar a thread %ld!\n", i);
@@ -276,6 +311,7 @@ int main(int argc, char **argv) {
       return 8;
     }
   }
+  fim = clock();
   #ifdef TEXTO
   printf("\nMedia coluna 1: %f\n", media[0]);
   printf("Media coluna 2: %f\n", media[1]);
@@ -289,16 +325,7 @@ int main(int argc, char **argv) {
     }
     printf("\n");
   }
-  /*#endif
-  calc_autovalores();
-  for (long i = 0; i < 3; i++) {
-      pthread_create(&threads[i], NULL, calc_autovetor, (void*) i);
-    }
-    for (int i = 0; i < 3; i++) {
-      pthread_join(threads[i], NULL);
-    }
-  ordena_autovetores();
-  #ifdef TEXTO*/
+  
   printf("\n");
   for (int h = 0; h < 3; h++){
     printf("autovalor: %f\n", autovalores[h]);
@@ -307,11 +334,20 @@ int main(int argc, char **argv) {
     printf("%f  ", autovetores[h][1]);
     printf("%f\n\n", autovetores[h][2]);
   }
+  
+  for(int i = 0; i < numLinhas; i++) {
+    for(int j = 0; j < 3; j++) {
+      printf("%.2f ", proj[i][j]);
+    }
+    printf("\n");
+  }
   #endif
-    
+  tempo = ((double)(fim - inicio)) / CLOCKS_PER_SEC;
+  printf("tempo de execucao: %.9f segundos\n", tempo);  
   sem_destroy(&mutexBar); //destroi o semaforo mutex
   sem_destroy(&cond); //destroi o semaforo cond
   fclose(arq); //fecha o arquivo de entrada
   free(mat);
+  free(proj);
   return 0;
 }
