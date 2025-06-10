@@ -11,7 +11,7 @@ float **mat; //matriz de entrada
 float **proj; // matriz de projeção
 float cov[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}}; //matriz de covariancia
 float autovalores[3] = {0.0, 0.0, 0.0}; // lista dos autovalores 
-float autovetores [3][3];
+float autovetores[3][3];
 float media[3] = {0, 0, 0}; //média de cada coluna da matriz
 int nthreads; //número de threads
 int numLinhas; //número de linhas da matriz
@@ -222,8 +222,8 @@ void *tPCA(void *threads) {
 }
 
 int main(int argc, char **argv) {
-  clock_t inicio, fim;
-  double tempo;
+  // marcar o tempo
+  struct timespec inicio, fim;
   FILE *arq; //arquivo de entrada
   pthread_t *threads; //vetor de threads
   if(argc != 3) {
@@ -298,7 +298,7 @@ int main(int argc, char **argv) {
   }
   sem_init(&mutexBar, 0, 1); //inicializa o semaforo mutex
   sem_init(&cond, 0, 0); //inicializa o semaforo cond
-  inicio = clock();
+  clock_gettime(CLOCK_MONOTONIC, &inicio);
   for(long int i = 0; i < nthreads; i++) {
     if(pthread_create(&threads[i], NULL, tPCA, (void *) i)) { //cria as threads
       printf("ERRO: Falha ao criar a thread %ld!\n", i);
@@ -311,7 +311,9 @@ int main(int argc, char **argv) {
       return 8;
     }
   }
-  fim = clock();
+  clock_gettime(CLOCK_MONOTONIC, &fim);
+  long long tempo_ns = (fim.tv_sec - inicio.tv_sec) * 1e9 + (fim.tv_nsec - inicio.tv_nsec);
+  
   #ifdef TEXTO
   printf("\nMedia coluna 1: %f\n", media[0]);
   printf("Media coluna 2: %f\n", media[1]);
@@ -342,8 +344,7 @@ int main(int argc, char **argv) {
     printf("\n");
   }
   #endif
-  tempo = ((double)(fim - inicio)) / CLOCKS_PER_SEC;
-  printf("tempo de execucao: %.9f segundos\n", tempo);  
+  printf("tempo de execucao: %lld nanosegundos\n", tempo_ns);
   sem_destroy(&mutexBar); //destroi o semaforo mutex
   sem_destroy(&cond); //destroi o semaforo cond
   fclose(arq); //fecha o arquivo de entrada
